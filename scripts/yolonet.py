@@ -10,7 +10,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Flatten, Dense, Activation, Reshape
 from keras.layers.convolutional import Conv2D, MaxPooling2D, AveragePooling2D
-
+from PIL import Image
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class YoloNet(object):
 
         # Load YOLO weights
         logger.info("Loading weights for Convo features...")
-        self.load_weights('../data/darknet19_448.weights')
+        self.load_weights('/home/filip/darknet/darknet19_448.weights')
 
     def init_model_detection(self):
         self.model.add(Conv2D(filters=64, kernel_size=(7, 7), input_shape=(3, 448, 448), border_mode='same', strides=2))
@@ -241,8 +241,7 @@ class YoloNet(object):
         self.model.add(LeakyReLU(alpha=0.1))
 
         # Classifier
-        self.model.add(Conv2D(filters=1000, kernel_size=(1, 1), border_mode='same'))
-        self.model.add(LeakyReLU(alpha=0.1))
+        self.model.add(Conv2D(filters=1000, kernel_size=(1, 1), border_mode='same', activation='linear'))
         self.model.add(AveragePooling2D(pool_size=(14, 14), strides=None, padding='valid'))
         self.model.add(Flatten())
         self.model.add(Activation('softmax'))
@@ -255,7 +254,7 @@ class YoloNet(object):
 
         # Read weights
         layer_index = 0
-        while layer_index < 63:
+        while layer_index < 62:
             layer = self.model.layers[layer_index]
             shape = [w.shape for w in layer.get_weights()]
             if isinstance(layer, Conv2D):
@@ -299,6 +298,7 @@ class YoloNet(object):
                 layer.set_weights(conv_weights)
             layer_index += 1
         remaining_weights = len(weights_file.read()) / 4
+        logger.info("Remaining weights {}".format(remaining_weights))
         weights_file.close()
 
     def model_info(self):
@@ -316,6 +316,6 @@ class YoloNet(object):
 
 if __name__ == '__main__':
     yn = YoloNet(mode='darknet19')
-    img = cv2.imread('../data/dog.jpg', 1)
+    img = cv2.imread('../data/giraffe.jpg', 1)
     yn.model_info()
     yn.predict(img)
