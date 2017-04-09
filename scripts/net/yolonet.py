@@ -5,11 +5,12 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import Sequential
-from keras.layers.core import Activation
 from keras.layers import GlobalAveragePooling2D
+from keras.layers.local import LocallyConnected2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.layers.core import Activation, Flatten, Dense, Dropout
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,59 +46,97 @@ class YoloNet(object):
         self.load_weights(weights, len(self.model.layers))
 
     def init_model_detection(self):
-        self.model.add(Conv2D(filters=64, kernel_size=(7, 7), input_shape=(3, 448, 448), border_mode='same', strides=2))
+        channel_axis = 1 if self.order == "th" else -1
+        self.model.add(Conv2D(filters=64, kernel_size=(7, 7), input_shape=(3, 224, 224), border_mode='same',
+                              strides=2, use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
 
-        self.model.add(Conv2D(filters=192, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=192, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=2, border_mode='valid'))
 
-        self.model.add(Conv2D(filters=128, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=128, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=256, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=2, border_mode='valid'))
 
-        self.model.add(Conv2D(filters=256, kernel_size=(1,1), border_mode='same'))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), border_mode='valid'))
 
-        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same'))
+        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same'))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
 
-        # end of pretrained model
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same'))
+        # Detection model
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', strides=2))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False, strides=2))
+        self.model.add(BatchNormalization(axis=channel_axis))
+        self.model.add(LeakyReLU(alpha=0.1))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
+        self.model.add(LeakyReLU(alpha=0.1))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(BatchNormalization(axis=channel_axis))
+        self.model.add(LeakyReLU(alpha=0.1))
+
+        # Locally connected
+        self.model.add(LocallyConnected2D(filters=256, kernel_size=(3, 3), border_mode='valid', use_bias=False))
+        self.model.add(LeakyReLU(alpha=0.1))
+        self.model.add(Dropout(0.5))
+        self.model.add(Flatten())
+        self.model.add(Dense(1715))
         self.model.add(LeakyReLU(alpha=0.1))
 
     def init_model_classifier(self):
@@ -261,7 +300,7 @@ class YoloNet(object):
         layer_index = 0
         while layer_index < weight_num:
             layer = self.model.layers[layer_index]
-            if isinstance(layer, Conv2D):
+            if isinstance(layer, Conv2D) or isinstance(layer, Dense) or isinstance(layer, LocallyConnected2D):
                 # Check Batch Normalisation
                 shape = [w.shape for w in layer.get_weights()]
                 batch_normalize = isinstance(self.model.layers[layer_index + 1], BatchNormalization)
@@ -326,7 +365,7 @@ class YoloNet(object):
                                       score[0][obj_idx]))
 
 if __name__ == '__main__':
-    yn = YoloNet(mode='darknet19', weights='../data/darknet19_448.weights')
-    img = cv2.imread('../data/dog.jpg', 1)
+    yn = YoloNet(mode='detection', weights='../data/yolov1.weights')
+    img = cv2.imread('../data/mal.jpg', 1)
     yn.model_info()
-    yn.show_results(img)
+    # yn.show_results(img)
