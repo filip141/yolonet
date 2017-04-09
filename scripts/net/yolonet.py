@@ -48,109 +48,109 @@ class YoloNet(object):
     def init_model_detection(self, v1_version=True):
         channel_axis = 1 if self.order == "th" else -1
         self.model.add(Conv2D(filters=64, kernel_size=(7, 7), input_shape=(3, 448, 448), border_mode='same',
-                              strides=2, use_bias=False))
+                              strides=2, use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
 
-        self.model.add(Conv2D(filters=192, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=192, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=2, border_mode='valid'))
 
-        self.model.add(Conv2D(filters=128, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=128, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=256, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), strides=2, border_mode='valid'))
 
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=256, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
         self.model.add(MaxPooling2D(pool_size=(2, 2), border_mode='valid'))
 
-        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=512, kernel_size=(1, 1), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
 
         # Detection model
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False, strides=2))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version, strides=2))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=False))
+        self.model.add(Conv2D(filters=1024, kernel_size=(3, 3), border_mode='same', use_bias=v1_version))
         if not v1_version:
             self.model.add(BatchNormalization(axis=channel_axis))
         self.model.add(LeakyReLU(alpha=0.1))
@@ -164,7 +164,7 @@ class YoloNet(object):
             self.model.add(Dense(1470, activation='linear'))
         else:
             # Locally connected
-            self.model.add(LocallyConnected2D(filters=256, kernel_size=(3, 3), border_mode='valid', use_bias=False))
+            self.model.add(LocallyConnected2D(filters=256, kernel_size=(3, 3), border_mode='valid', use_bias=True))
             self.model.add(LeakyReLU(alpha=0.1))
             self.model.add(Dropout(0.5))
             self.model.add(Flatten())
@@ -330,14 +330,13 @@ class YoloNet(object):
 
         # Read weights
         layer_index = 0
+        prev_layer = self.model.layers[0].batch_input_shape[1]
         while layer_index < weight_num:
             layer = self.model.layers[layer_index]
             if isinstance(layer, Conv2D) or isinstance(layer, Dense) or isinstance(layer, LocallyConnected2D):
                 # Check Batch Normalisation
-                shape = [w.shape for w in layer.get_weights()]
+                shape = [(layer.kernel_size[0], layer.kernel_size[0], prev_layer, layer.filters)]
                 batch_normalize = isinstance(self.model.layers[layer_index + 1], BatchNormalization)
-                if not batch_normalize:
-                    print()
                 w_shape = shape[0]
 
                 # Read Bias weights
@@ -372,6 +371,7 @@ class YoloNet(object):
                 if batch_normalize:
                     self.model.layers[layer_index + 1].set_weights(bn_weight_list)
                 layer.set_weights(conv_weights)
+                prev_layer = layer.filters
             layer_index += 1
         remaining_weights = len(weights_file.read()) / 4
         logger.info("Remaining weights {}".format(remaining_weights))
