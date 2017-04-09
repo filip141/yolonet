@@ -5,11 +5,11 @@ import logging
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import Sequential
+from keras.layers.core import Activation
 from keras.layers import GlobalAveragePooling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
-from keras.layers.core import Flatten, Dense, Activation, Reshape
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class YoloNet(object):
 
-    def __init__(self, mode='detection'):
+    def __init__(self, weights, mode='detection'):
         keras.backend.set_image_dim_ordering('th')
         logger.info("Yolo model initialization...")
         self.order = 'th'
@@ -42,7 +42,7 @@ class YoloNet(object):
 
         # Load YOLO weights
         logger.info("Loading weights for Convo features...")
-        self.load_weights('/home/filip/darknet/darknet19_448.weights', len(self.model.layers))
+        self.load_weights(weights, len(self.model.layers))
 
     def init_model_detection(self):
         self.model.add(Conv2D(filters=64, kernel_size=(7, 7), input_shape=(3, 448, 448), border_mode='same', strides=2))
@@ -173,11 +173,10 @@ class YoloNet(object):
         self.model.add(LeakyReLU(alpha=0.1))
 
         # Classifier
-        self.model.add(Conv2D(filters=1000, kernel_size=(3, 3), border_mode='same'))
-        self.model.add(LeakyReLU(alpha=0.1))
-        self.model.add(AveragePooling2D(pool_size=(7, 7), strides=None, padding='valid'))
-        self.model.add(Flatten())
-        self.model.add(Activation('softmax'))
+        # self.model.add(Conv2D(filters=1000, kernel_size=(3, 3), border_mode='same'))
+        # self.model.add(LeakyReLU(alpha=0.1))
+        # self.model.add(GlobalAveragePooling2D())
+        # self.model.add(Activation('softmax'))
 
     def init_model_darknet19(self):
         channel_axis = 1 if self.order == "th" else -1
@@ -250,6 +249,7 @@ class YoloNet(object):
         # Classifier
         self.model.add(Conv2D(filters=1000, kernel_size=(1, 1), border_mode='same', activation='linear'))
         self.model.add(GlobalAveragePooling2D())
+        self.model.add(Activation('softmax'))
 
     def load_weights(self, yolo_weight_file, weight_num):
         # Read header
@@ -261,9 +261,9 @@ class YoloNet(object):
         layer_index = 0
         while layer_index < weight_num:
             layer = self.model.layers[layer_index]
-            shape = [w.shape for w in layer.get_weights()]
             if isinstance(layer, Conv2D):
                 # Check Batch Normalisation
+                shape = [w.shape for w in layer.get_weights()]
                 batch_normalize = isinstance(self.model.layers[layer_index + 1], BatchNormalization)
                 if not batch_normalize:
                     print()
@@ -326,7 +326,7 @@ class YoloNet(object):
                                       score[0][obj_idx]))
 
 if __name__ == '__main__':
-    yn = YoloNet(mode='darknet19')
-    img = cv2.imread('../data/mal.jpg', 1)
+    yn = YoloNet(mode='darknet19', weights='../data/darknet19_448.weights')
+    img = cv2.imread('../data/dog.jpg', 1)
     yn.model_info()
     yn.show_results(img)
