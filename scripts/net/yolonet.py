@@ -333,7 +333,8 @@ class YoloNet(object):
         prev_layer = self.model.layers[0].batch_input_shape[1]
         while layer_index < weight_num:
             layer = self.model.layers[layer_index]
-            if isinstance(layer, Conv2D) or isinstance(layer, Dense) or isinstance(layer, LocallyConnected2D):
+            # Loading weights for convolution layer
+            if isinstance(layer, Conv2D):
                 # Check Batch Normalisation
                 shape = [(layer.kernel_size[0], layer.kernel_size[0], prev_layer, layer.filters)]
                 batch_normalize = isinstance(self.model.layers[layer_index + 1], BatchNormalization)
@@ -372,6 +373,23 @@ class YoloNet(object):
                     self.model.layers[layer_index + 1].set_weights(bn_weight_list)
                 layer.set_weights(conv_weights)
                 prev_layer = layer.filters
+            # Loading weights for dense layer
+            if isinstance(layer, Dense):
+
+                # Read Dense Bias
+                dense_bias = np.ndarray(
+                    shape=(layer.output_shape[1], ),
+                    dtype='float32',
+                    buffer=weights_file.read(layer.output_shape[1] * 4)
+                )
+
+                # Read convolution weights
+                dense_weights = [layer.input_shape[1], layer.output_shape[1]]
+                dense_weights = np.ndarray(
+                    shape=(dense_weights[0], dense_weights[1]),
+                    dtype='float32',
+                    buffer=weights_file.read(np.product(dense_weights) * 4))
+                layer.set_weights([dense_weights, dense_bias])
             layer_index += 1
         remaining_weights = len(weights_file.read()) / 4
         logger.info("Remaining weights {}".format(remaining_weights))
@@ -396,8 +414,51 @@ class YoloNet(object):
                                       self.inet_nm[obj_idx],
                                       score[0][obj_idx]))
 
+    def predict(self, image):
+        img_resized = cv2.resize(image, (448, 448))
+        image_data = np.array(img_resized, dtype='float32')
+        image_data /= 255.
+        image_data = np.transpose(image_data, (2, 0, 1))
+        image_data = np.expand_dims(image_data, 0)
+        out = self.model.predict(image_data)
+        return self.yolo2boxes(out)
+
+    def yolo2boxes(self, net_out, threshold=0.2, sqrt=1.8, C=20, B=2, S=7):
+        boxes_final = []
+        SS = S * S
+        prob_size = SS * C
+        conf_size = SS * B
+    
+        probs = net_out[0, 0:prob_size]
+        confs = net_out[0, prob_size:(prob_size + conf_size)]
+        cords = net_out[0, (prob_size + conf_size):]
+        probs = probs.reshape([SS, C])
+        confs = confs.reshape([SS, B])
+        cords = cords.reshape([SS, B, 4])
+    
+        for grid in range(SS):
+            for b in range(B):
+                bx = {}
+                bx['grid'] = grid
+                bx['box_num'] = b
+                bx['confidence'] = confs[grid, b]
+                bx['x'] = (cords[grid, b, 0] + grid % S) / S
+                bx['y'] = (cords[grid, b, 1] + grid // S) / S
+                bx['weight'] = cords[grid, b, 2] ** sqrt
+                bx['height'] = cords[grid, b, 3] ** sqrt
+                p = probs[grid, :] * bx['confidence']
+            
+                for class_num in range(C):
+                    if p[class_num] >= threshold:
+                        bx['probability'] = p[class_num]
+                        bx['class'] = class_num
+                        boxes_final.append(bx)
+        return boxes_final
+
+
+
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
     img = cv2.imread('../data/mal.jpg', 1)
     yn.model_info()
-    # yn.show_results(img)
+    yn.predict(img)
