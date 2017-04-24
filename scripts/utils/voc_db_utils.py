@@ -83,6 +83,4 @@ class Database(object):
 
 if __name__ == '__main__':
     voc = Database('voc2007')
-    for x in voc.db_iter():
-        print("bnbnbnbnbnbn {}".format(x))
 

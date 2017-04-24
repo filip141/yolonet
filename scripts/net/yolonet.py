@@ -1,5 +1,5 @@
+import os
 import cv2
-import glob
 import keras
 import logging
 import numpy as np
@@ -35,10 +35,14 @@ class YoloNet(object):
             raise ValueError("Not implemented mode!")
 
         # Load ImageNet Labels
-        with open('../data/imagenet.labels.list', 'r') as imagenet_labels:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        im_net_labels = os.path.join(dir_path, "..", "..", "data", "imagenet.labels.list")
+        with open(im_net_labels, 'r') as imagenet_labels:
             self.inet_lab = imagenet_labels.readlines()
+
         # Load ImageNet Names
-        with open('../data/imagenet.shortnames.list', 'r') as imagenet_names:
+        im_net_names = os.path.join(dir_path, "..", "..", "data", "imagenet.shortnames.list")
+        with open(im_net_names, 'r') as imagenet_names:
             self.inet_nm = imagenet_names.readlines()
 
         # Load YOLO weights
@@ -421,44 +425,67 @@ class YoloNet(object):
         image_data = np.transpose(image_data, (2, 0, 1))
         image_data = np.expand_dims(image_data, 0)
         out = self.model.predict(image_data)
-        return self.yolo2boxes(out)
+        boxes_list = self.yolo2boxes(out)
+        self.plot_boxes(boxes_list, image)
 
-    def yolo2boxes(self, net_out, threshold=0.2, sqrt=1.8, C=20, B=2, S=7):
+    def plot_boxes(self, boxes, image):
+        clsss_dict = {
+            0: "aeroplane",
+            1: "bicycle",
+            2: "bird",
+            3: "boat"
+        }
+        # Iterate over boxes
+        for box in boxes:
+            h, w, _ = image.shape
+            left = int((box['x'] - box['width'] / 2.) * w)
+            right = int((box['x'] + box['width'] / 2.) * w)
+            top = int((box['y'] - box['width'] / 2.) * h)
+            bot = int((box['y'] + box['width'] / 2.) * h)
+            thick = int((h + w) // 150)
+            print(clsss_dict[box['class']])
+            cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), thick)
+        plt.imshow(image)
+        plt.show()
+
+    @staticmethod
+    def yolo2boxes(net_out, threshold=0.2, sqrt=1.8, classes=20, boxes=2, cells=7):
+        # Define parameters
         boxes_final = []
-        SS = S * S
-        prob_size = SS * C
-        conf_size = SS * B
-    
+        all_cells = cells * cells
+        prob_size = all_cells * classes
+        conf_size = all_cells * boxes
+
+        # Reconstruct output
         probs = net_out[0, 0:prob_size]
         confs = net_out[0, prob_size:(prob_size + conf_size)]
         cords = net_out[0, (prob_size + conf_size):]
-        probs = probs.reshape([SS, C])
-        confs = confs.reshape([SS, B])
-        cords = cords.reshape([SS, B, 4])
-    
-        for grid in range(SS):
-            for b in range(B):
+        probs = probs.reshape([all_cells, classes])
+        confs = confs.reshape([all_cells, boxes])
+        cords = cords.reshape([all_cells, boxes, 4])
+
+        # Create dictionaries
+        for grid in range(all_cells):
+            for b in range(boxes):
                 bx = {}
                 bx['grid'] = grid
                 bx['box_num'] = b
                 bx['confidence'] = confs[grid, b]
-                bx['x'] = (cords[grid, b, 0] + grid % S) / S
-                bx['y'] = (cords[grid, b, 1] + grid // S) / S
-                bx['weight'] = cords[grid, b, 2] ** sqrt
+                bx['x'] = (cords[grid, b, 0] + grid % cells) / cells
+                bx['y'] = (cords[grid, b, 1] + grid // cells) / cells
+                bx['width'] = cords[grid, b, 2] ** sqrt
                 bx['height'] = cords[grid, b, 3] ** sqrt
                 p = probs[grid, :] * bx['confidence']
             
-                for class_num in range(C):
+                for class_num in range(classes):
                     if p[class_num] >= threshold:
                         bx['probability'] = p[class_num]
                         bx['class'] = class_num
                         boxes_final.append(bx)
         return boxes_final
 
-
-
 if __name__ == '__main__':
-    yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    img = cv2.imread('../data/mal.jpg', 1)
+    yn = YoloNet(mode='detection', weights='../../data/yolo-full.weights')
+    img = cv2.imread('../../data/cock.jpg', 1)
     yn.model_info()
-    yn.predict(img)
+    print(yn.predict(img))
