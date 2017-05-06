@@ -4,6 +4,7 @@ import keras
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
+from keras.optimizers import SGD
 from keras.models import Sequential
 from keras.layers import GlobalAveragePooling2D
 from keras.layers.local import LocallyConnected2D
@@ -12,12 +13,14 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.core import Activation, Flatten, Dense, Dropout
 
+from net.data import Database
+from net.loss import custom_loss_2
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class YoloNet(object):
-
     def __init__(self, weights, mode='detection'):
         keras.backend.set_image_dim_ordering('th')
         logger.info("Yolo model initialization...")
@@ -36,18 +39,18 @@ class YoloNet(object):
 
         # Load ImageNet Labels
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        im_net_labels = os.path.join(dir_path, "..", "..", "data", "imagenet.labels.list")
+        im_net_labels = os.path.join(dir_path, "..", "data", "imagenet.labels.list")
         with open(im_net_labels, 'r') as imagenet_labels:
             self.inet_lab = imagenet_labels.readlines()
 
         # Load ImageNet Names
-        im_net_names = os.path.join(dir_path, "..", "..", "data", "imagenet.shortnames.list")
+        im_net_names = os.path.join(dir_path, "..", "data", "imagenet.shortnames.list")
         with open(im_net_names, 'r') as imagenet_names:
             self.inet_nm = imagenet_names.readlines()
 
         # Load YOLO weights
         logger.info("Loading weights for Convo features...")
-        self.load_weights(weights, len(self.model.layers))
+        self.load_weights(weights, len(self.model.layers), number_of_layers_to_load=44)  # TODO zmienione
 
     def init_model_detection(self, v1_version=True):
         channel_axis = 1 if self.order == "th" else -1
@@ -326,16 +329,16 @@ class YoloNet(object):
         self.model.add(GlobalAveragePooling2D())
         self.model.add(Activation('softmax'))
 
-    def load_weights(self, yolo_weight_file, weight_num):
+    def load_weights(self, yolo_weight_file, weight_num, number_of_layers_to_load=10000):
         # Read header
         weights_file = open(yolo_weight_file, 'rb')
-        weights_header = np.ndarray(shape=(4, ), dtype='int32', buffer=weights_file.read(16))
+        weights_header = np.ndarray(shape=(4,), dtype='int32', buffer=weights_file.read(16))
         logger.info("Weights header: {}".format(weights_header))
 
         # Read weights
         layer_index = 0
         prev_layer = self.model.layers[0].batch_input_shape[1]
-        while layer_index < weight_num:
+        while layer_index < weight_num and layer_index < number_of_layers_to_load:
             layer = self.model.layers[layer_index]
             # Loading weights for convolution layer
             if isinstance(layer, Conv2D):
@@ -346,7 +349,7 @@ class YoloNet(object):
 
                 # Read Bias weights
                 conv_bias = np.ndarray(
-                    shape=(w_shape[-1], ),
+                    shape=(w_shape[-1],),
                     dtype='float32',
                     buffer=weights_file.read(w_shape[-1] * 4)
                 )
@@ -379,10 +382,9 @@ class YoloNet(object):
                 prev_layer = layer.filters
             # Loading weights for dense layer
             if isinstance(layer, Dense):
-
                 # Read Dense Bias
                 dense_bias = np.ndarray(
-                    shape=(layer.output_shape[1], ),
+                    shape=(layer.output_shape[1],),
                     dtype='float32',
                     buffer=weights_file.read(layer.output_shape[1] * 4)
                 )
@@ -400,6 +402,7 @@ class YoloNet(object):
         weights_file.close()
 
     def model_info(self):
+        # plot_model(self.model, to_file='model.png', show_shapes=True)
         self.model.summary()
 
     def classify(self, image):
@@ -476,7 +479,7 @@ class YoloNet(object):
                 bx['width'] = cords[grid, b, 2] ** sqrt
                 bx['height'] = cords[grid, b, 3] ** sqrt
                 p = probs[grid, :] * bx['confidence']
-            
+
                 for class_num in range(classes):
                     if p[class_num] >= threshold:
                         bx['probability'] = p[class_num]
@@ -484,8 +487,24 @@ class YoloNet(object):
                         boxes_final.append(bx)
         return boxes_final
 
+    def learn(self, batch_size):
+        # TODO this loss function works only on theano!
+        self.model.compile(loss=custom_loss_2, optimizer=SGD(), metrics=['accuracy'])
+        # freeze first classification layers
+        for layer in self.model.layers[:44]:
+            layer.trainable = False
+        d = Database()
+        samples_per_epoch = d.set_size / batch_size
+        self.model.fit_generator(d.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
+                                 validation_data=d.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
+                                 validation_steps=5 * batch_size,
+                                 samples_per_epoch=samples_per_epoch,
+                                 nb_epoch=10)
+
+
 if __name__ == '__main__':
-    yn = YoloNet(mode='detection', weights='../../data/yolo-full.weights')
-    img = cv2.imread('../../data/cock.jpg', 1)
-    yn.model_info()
-    print(yn.predict(img))
+    yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
+    yn.learn(batch_size=16)
+    # img = cv2.imread('../../data/cock.jpg', 1)
+    # yn.model_info()
+    # print(yn.predict(img))
