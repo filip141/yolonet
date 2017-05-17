@@ -19,6 +19,10 @@ VOC_CLASSES = [
 ]
 
 
+def path_sort(record):
+    return record[-10:-3]
+
+
 def class2id(class_name):
     return VOC_CLASSES.index(class_name)
 
@@ -34,6 +38,9 @@ class Database(object):
         im_path = os.path.join(curr_dir, "..", DB_FILES[name]['images'])
         ann_paths_list = [os.path.join(ann_path, x) for x in os.listdir(ann_path)]
         im_patchs_list = [os.path.join(im_path, x) for x in os.listdir(im_path)]
+        ann_paths_list = sorted(ann_paths_list, key=path_sort)
+        im_patchs_list = sorted(im_patchs_list, key=path_sort)
+
         split_boundary = int((1 - validation_split) * len(im_patchs_list))
         set_size = len(im_patchs_list)
         return self.ann_xml_gen(ann_paths_list[:split_boundary]), self.image_gen(im_patchs_list[:split_boundary]), \
@@ -45,12 +52,14 @@ class Database(object):
         while True:
             for d_file_path in d_files_paths:
                 # Check if file exist
-                file_desc = Image.open(d_file_path)
-                resize = file_desc.resize((448, 448), Image.NEAREST)
-                resize.load()
-                data = np.asarray(resize, dtype="uint8")
-                data = np.swapaxes(np.array(data), 0, 2)
-                yield data
+                file_desc = cv2.imread(d_file_path, 1)
+                file_desc = cv2.cvtColor(file_desc, cv2.COLOR_BGR2RGB)
+                img_resized = cv2.resize(file_desc, (448, 448))
+                image_data = np.array(img_resized, dtype='float32')
+                image_data /= 255.
+                image_data = np.transpose(image_data, (2, 0, 1))
+                image_data = np.expand_dims(image_data, 0)
+                yield image_data
                 file_desc.close()
 
     @staticmethod

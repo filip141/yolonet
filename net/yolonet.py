@@ -463,7 +463,7 @@ class YoloNet(object):
         plt.show()
 
     @staticmethod
-    def yolo2boxes(net_out, threshold=0.2, sqrt=1.8, classes=20, boxes=2, cells=7):
+    def yolo2boxes(net_out, threshold=0.3, sqrt=1.8, classes=20, boxes=2, cells=7):
         # Define parameters
         boxes_final = []
         all_cells = cells * cells
@@ -500,15 +500,13 @@ class YoloNet(object):
 
     def learn(self, batch_size):
         # TODO this loss function works only on theano!
-        # self.model.compile(loss=custom_loss_2, optimizer=SGD(), metrics=['accuracy'])
-        self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.001), metrics=['accuracy'])
+        self.model.compile(loss=custom_loss_2, optimizer=SGD(0.0001), metrics=['accuracy'])
+        # self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.001), metrics=['accuracy'])
         # freeze first classification layers
-        for layer in self.model.layers[:44]:
-            layer.trainable = False
-        d = Database()
-        samples_per_epoch = d.set_size / batch_size
-        self.model.fit_generator(d.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
-                                 validation_data=d.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
+        db = Database()
+        samples_per_epoch = db.set_size / batch_size
+        self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
+                                 validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
                                  validation_steps=5 * batch_size,
                                  samples_per_epoch=samples_per_epoch,
                                  nb_epoch=10)
@@ -516,7 +514,8 @@ class YoloNet(object):
 
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    # img = cv2.imread('../data/cock.jpg', 1)
+    # img = cv2.imread('../data/plane .jpg', 1)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # yn.model_info()
     # print(yn.predict(img))
     yn.learn(batch_size=16)
