@@ -505,6 +505,8 @@ class YoloNet(object):
         # freeze first classification layers
         db = Database()
         samples_per_epoch = db.set_size / batch_size
+        # for x, y in db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'):
+        #     print(x.shape, y.shape)
         self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
                                  validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
                                  validation_steps=5 * batch_size,

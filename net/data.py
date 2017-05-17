@@ -60,7 +60,6 @@ class Database(object):
                 image_data = np.transpose(image_data, (2, 0, 1))
                 image_data = np.expand_dims(image_data, 0)
                 yield image_data
-                file_desc.close()
 
     @staticmethod
     def ann_xml_gen(d_files_paths):
@@ -76,12 +75,12 @@ class Database(object):
         elif type == 'train':
             db_iter = self.db_iter(self.test_annotations, self.test_images, side=side, boxes=boxes, classes=classes)
         while True:
-            batch_x, batch_y = [], []
-            for _ in range(batch_size):
+            batch_x = np.zeros((batch_size, 3, 448, 448))
+            batch_y = np.zeros((batch_size, 1470))
+            for idx in range(batch_size):
                 x, y = next(db_iter, None)
-                batch_x.append(x)
-                batch_y.append(y)
-            batch_x, batch_y = np.array(batch_x), np.array(batch_y)
+                batch_x[idx] = x[0]
+                batch_y[idx] = y
             yield batch_x, batch_y
 
     def db_iter(self, annotation_gen, img_gen, side=7, boxes=3, classes=20):
