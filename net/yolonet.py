@@ -3,10 +3,12 @@ import cv2
 import keras
 import logging
 import numpy as np
+from keras import backend as K
 import matplotlib.pyplot as plt
 from keras.optimizers import SGD
 from keras.models import Sequential
 from keras.layers import GlobalAveragePooling2D
+from keras.utils.conv_utils import convert_kernel
 from keras.layers.local import LocallyConnected2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
@@ -50,7 +52,8 @@ class YoloNet(object):
 
         # Load YOLO weights
         logger.info("Loading weights for Convo features...")
-        self.load_weights(weights, len(self.model.layers), number_of_layers_to_load=44)  # TODO zmienione
+        # self.load_weights(weights, len(self.model.layers))
+        self.load_weights(weights, 44)
 
     def init_model_detection(self, v1_version=True):
         channel_axis = 1 if self.order == "th" else -1
@@ -370,9 +373,10 @@ class YoloNet(object):
                 # Read convolution weights
                 conv_weights = np.ndarray(
                     shape=(w_shape[-1], w_shape[2], w_shape[0], w_shape[1]),
+                    # shape=(w_shape[-1], w_shape[2], w_shape[1], w_shape[0]), #theano
                     dtype='float32',
                     buffer=weights_file.read(np.product(w_shape) * 4))
-                conv_weights = np.transpose(conv_weights, [2, 3, 1, 0])
+                conv_weights = np.transpose(conv_weights, (3, 2, 1, 0))
                 conv_weights = [conv_weights] if batch_normalize else [
                     conv_weights, conv_bias
                 ]
@@ -400,6 +404,13 @@ class YoloNet(object):
         remaining_weights = len(weights_file.read()) / 4
         logger.info("Remaining weights {}".format(remaining_weights))
         weights_file.close()
+
+        if K.backend() == 'theano':
+            for layer in self.model.layers:
+                if layer.__class__.__name__ in ['Conv2D']:
+                    original_w = K.get_value(layer.kernel)
+                    converted_w = convert_kernel(original_w)
+                    K.set_value(layer.kernel, converted_w)
 
     def model_info(self):
         # plot_model(self.model, to_file='model.png', show_shapes=True)
@@ -489,7 +500,8 @@ class YoloNet(object):
 
     def learn(self, batch_size):
         # TODO this loss function works only on theano!
-        self.model.compile(loss=custom_loss_2, optimizer=SGD(), metrics=['accuracy'])
+        # self.model.compile(loss=custom_loss_2, optimizer=SGD(), metrics=['accuracy'])
+        self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.001), metrics=['accuracy'])
         # freeze first classification layers
         for layer in self.model.layers[:44]:
             layer.trainable = False
@@ -504,7 +516,7 @@ class YoloNet(object):
 
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    yn.learn(batch_size=16)
-    # img = cv2.imread('../../data/cock.jpg', 1)
+    # img = cv2.imread('../data/cock.jpg', 1)
     # yn.model_info()
     # print(yn.predict(img))
+    yn.learn(batch_size=16)
