@@ -52,8 +52,8 @@ class YoloNet(object):
 
         # Load YOLO weights
         logger.info("Loading weights for Convo features...")
-        # self.load_weights(weights, len(self.model.layers))
-        self.load_weights(weights, 44)
+        self.load_weights(weights, len(self.model.layers))
+        # self.load_weights(weights, 44)
 
     def init_model_detection(self, v1_version=True):
         channel_axis = 1 if self.order == "th" else -1
@@ -457,7 +457,7 @@ class YoloNet(object):
             top = int((box['y'] - box['width'] / 2.) * h)
             bot = int((box['y'] + box['width'] / 2.) * h)
             thick = int((h + w) // 150)
-            print(clsss_dict[box['class']])
+            # print(clsss_dict[box['class']])
             cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), thick)
         plt.imshow(image)
         plt.show()
@@ -487,8 +487,8 @@ class YoloNet(object):
                 bx['confidence'] = confs[grid, b]
                 bx['x'] = (cords[grid, b, 0] + grid % cells) / cells
                 bx['y'] = (cords[grid, b, 1] + grid // cells) / cells
-                bx['width'] = cords[grid, b, 2] ** sqrt
-                bx['height'] = cords[grid, b, 3] ** sqrt
+                bx['width'] = cords[grid, b, 2] * sqrt
+                bx['height'] = cords[grid, b, 3] * sqrt
                 p = probs[grid, :] * bx['confidence']
 
                 for class_num in range(classes):
@@ -500,13 +500,17 @@ class YoloNet(object):
 
     def learn(self, batch_size):
         # TODO this loss function works only on theano!
-        self.model.compile(loss=custom_loss_2, optimizer=SGD(0.0001), metrics=['accuracy'])
-        # self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.001), metrics=['accuracy'])
+        # self.model.compile(loss=custom_loss_2, optimizer=SGD(0.0001), metrics=['accuracy'])
+        self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.0001), metrics=['accuracy'])
         # freeze first classification layers
         db = Database()
         samples_per_epoch = db.set_size / batch_size
-        # for x, y in db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'):
-        #     print(x.shape, y.shape)
+        # for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
+        #     img = np.transpose(x[0], (1, 2, 0))
+        #     img = (img * 255).astype(np.uint8).copy()
+        #     boxes_list = self.yolo2boxes(y, sqrt=1)
+        #     self.plot_boxes(boxes_list, img)
+        #     print()
         self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
                                  validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
                                  validation_steps=5 * batch_size,
@@ -516,8 +520,8 @@ class YoloNet(object):
 
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    # img = cv2.imread('../data/plane .jpg', 1)
+    # img = cv2.imread('../data/bird.jpg', 1)
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # yn.model_info()
     # print(yn.predict(img))
-    yn.learn(batch_size=16)
+    yn.learn(batch_size=128)

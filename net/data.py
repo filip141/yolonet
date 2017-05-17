@@ -124,8 +124,8 @@ class Database(object):
                 for it_box in range(boxes):
                     box_x = (model_x % grid_x_width) / grid_x_width
                     box_y = (model_y % grid_y_height) / grid_y_height
-                    box_w = model_width
-                    box_h = model_height
+                    box_w = model_width / float(im_width)
+                    box_h = model_height / float(im_height)
                     confs[int((ind_y * side) + ind_x), it_box] = 1.0
                     cords[int((ind_y * side) + ind_x), it_box] = [box_x, box_y, box_w, box_h]
             yield im_file, np.hstack((probs.flatten(), confs.flatten(), cords.flatten()))
