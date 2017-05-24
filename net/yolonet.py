@@ -1,11 +1,12 @@
 import os
 import cv2
+import h5py
 import keras
 import logging
 import numpy as np
 from keras import backend as K
 import matplotlib.pyplot as plt
-from keras.optimizers import SGD
+from keras.optimizers import SGD, RMSprop
 from keras.models import Sequential
 from keras.layers import GlobalAveragePooling2D
 from keras.utils.conv_utils import convert_kernel
@@ -15,8 +16,8 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.core import Activation, Flatten, Dense, Dropout
 
-from net.data import Database
-from net.loss import custom_loss_2
+from data import Database
+from loss import custom_loss_2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -456,9 +457,8 @@ class YoloNet(object):
             right = int((box['x'] + box['width'] / 2.) * w)
             top = int((box['y'] - box['width'] / 2.) * h)
             bot = int((box['y'] + box['width'] / 2.) * h)
-            thick = int((h + w) // 150)
             # print(clsss_dict[box['class']])
-            cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), thick)
+            cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), 2)
         plt.imshow(image)
         plt.show()
 
@@ -500,22 +500,29 @@ class YoloNet(object):
 
     def learn(self, batch_size):
         # TODO this loss function works only on theano!
-        # self.model.compile(loss=custom_loss_2, optimizer=SGD(0.0001), metrics=['accuracy'])
-        self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.0001), metrics=['accuracy'])
+        self.model.compile(loss=custom_loss_2, optimizer=SGD(0.0001), metrics=['mae', 'mse'])
+        # self.model.compile(loss='mean_squared_error', optimizer=SGD(lr=0.0001), metrics=['accuracy'])
         # freeze first classification layers
-        db = Database()
+        db = Database(name='voc2012')
         samples_per_epoch = db.set_size / batch_size
-        # for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
-        #     img = np.transpose(x[0], (1, 2, 0))
-        #     img = (img * 255).astype(np.uint8).copy()
-        #     boxes_list = self.yolo2boxes(y, sqrt=1)
-        #     self.plot_boxes(boxes_list, img)
-        #     print()
-        self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
-                                 validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
-                                 validation_steps=5 * batch_size,
-                                 samples_per_epoch=samples_per_epoch,
-                                 nb_epoch=10)
+        for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
+            img = np.transpose(x[0], (1, 2, 0))
+            img = (img * 255).astype(np.uint8).copy()
+            boxes_list = self.yolo2boxes(y, sqrt=1)
+            self.plot_boxes(boxes_list, img)
+            print()
+        # self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
+        #                          validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
+        #                          validation_steps=5 * batch_size,
+        #                          samples_per_epoch=samples_per_epoch,
+        #                          nb_epoch=500)
+        # # serialize model to JSON
+        # model_json = self.model.to_json()
+        # with open("../data/model_file.json", "w") as json_file:
+        #     json_file.write(model_json)
+        # # serialize weights to HDF5
+        # self.model.save_weights("../data/model_weights.h5")
+        # logger.info("Saved model to disk")
 
 
 if __name__ == '__main__':
@@ -524,4 +531,4 @@ if __name__ == '__main__':
     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     # yn.model_info()
     # print(yn.predict(img))
-    yn.learn(batch_size=128)
+    yn.learn(batch_size=8)

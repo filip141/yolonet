@@ -9,6 +9,10 @@ DB_FILES = {
     "voc2007": {
         "annotations": "data/VOC2007/Annotations",
         "images": "data/VOC2007/JPEGImages",
+    },
+    "voc2012": {
+        "annotations": "data/VOC2012/Annotations",
+        "images": "data/VOC2012/JPEGImages",
     }
 }
 
