@@ -6,14 +6,16 @@ import logging
 import numpy as np
 from keras import backend as K
 import matplotlib.pyplot as plt
-from keras.optimizers import SGD, RMSprop
 from keras.models import Sequential
+from keras.models import load_model
+from keras.optimizers import SGD, RMSprop
 from keras.layers import GlobalAveragePooling2D
 from keras.utils.conv_utils import convert_kernel
 from keras.layers.local import LocallyConnected2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.callbacks import EarlyStopping
 from keras.layers.core import Activation, Flatten, Dense, Dropout
 
 from data import Database
@@ -450,6 +452,11 @@ class YoloNet(object):
             2: "bird",
             3: "boat"
         }
+        clsss_dict = [
+            "person", "bird", "cat", "cow", "dog", "horse", "sheep",
+            "aeroplane", "bicycle", "boat", "bus", "car", "motorbike", "train",
+            "bottle", "chair", "diningtable", "pottedplant", "sofa", "tvmonitor"
+        ]
         # Iterate over boxes
         for box in boxes:
             h, w, _ = image.shape
@@ -457,7 +464,7 @@ class YoloNet(object):
             right = int((box['x'] + box['width'] / 2.) * w)
             top = int((box['y'] - box['width'] / 2.) * h)
             bot = int((box['y'] + box['width'] / 2.) * h)
-            # print(clsss_dict[box['class']])
+            print(clsss_dict[box['class']])
             cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), 2)
         plt.imshow(image)
         plt.show()
@@ -487,15 +494,17 @@ class YoloNet(object):
                 bx['confidence'] = confs[grid, b]
                 bx['x'] = (cords[grid, b, 0] + grid % cells) / cells
                 bx['y'] = (cords[grid, b, 1] + grid // cells) / cells
-                bx['width'] = cords[grid, b, 2] * sqrt
-                bx['height'] = cords[grid, b, 3] * sqrt
+                bx['width'] = cords[grid, b, 2] ** sqrt
+                bx['height'] = cords[grid, b, 3] ** sqrt
                 p = probs[grid, :] * bx['confidence']
 
+                # print(bx)
                 for class_num in range(classes):
                     if p[class_num] >= threshold:
                         bx['probability'] = p[class_num]
                         bx['class'] = class_num
                         boxes_final.append(bx)
+        print(boxes_final)
         return boxes_final
 
     def learn(self, batch_size):
@@ -505,30 +514,39 @@ class YoloNet(object):
         # freeze first classification layers
         db = Database(name='voc2012')
         samples_per_epoch = db.set_size / batch_size
-        for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
-            img = np.transpose(x[0], (1, 2, 0))
-            img = (img * 255).astype(np.uint8).copy()
-            boxes_list = self.yolo2boxes(y, sqrt=1)
-            self.plot_boxes(boxes_list, img)
-            print()
-        # self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
-        #                          validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
-        #                          validation_steps=5 * batch_size,
-        #                          samples_per_epoch=samples_per_epoch,
-        #                          nb_epoch=500)
-        # # serialize model to JSON
-        # model_json = self.model.to_json()
-        # with open("../data/model_file.json", "w") as json_file:
-        #     json_file.write(model_json)
-        # # serialize weights to HDF5
-        # self.model.save_weights("../data/model_weights.h5")
-        # logger.info("Saved model to disk")
+        early_stopping_epoches = 25
+        # for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
+        #     img = np.transpose(x[0], (1, 2, 0))
+        #     img = (img * 255).astype(np.uint8).copy()
+        #     boxes_list = self.yolo2boxes(y, sqrt=1)
+        #     self.plot_boxes(boxes_list, img)
+        #     print()
+        self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
+                                 validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
+                                 validation_steps=5 * batch_size,
+                                 samples_per_epoch=samples_per_epoch,
+                                 nb_epoch=500,
+                                 callbacks=[EarlyStopping(patience=early_stopping_epoches, verbose=1)]
+                                 )
+        # serialize model to JSON
+        model_json = self.model.to_json()
+        with open("../data/model_file.json", "w") as json_file:
+            json_file.write(model_json)
+        # serialize weights to HDF5
+        self.model.save_weights("../data/model_weights.h5")
+        logger.info("Saved model to disk")
 
 
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    # img = cv2.imread('../data/bird.jpg', 1)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # yn.model_info()
-    # print(yn.predict(img))
-    yn.learn(batch_size=8)
+    # import keras.losses
+    keras.losses.custom_loss_2 = custom_loss_2
+    yn.model = load_model('best_model.h5')
+    img = cv2.imread('../data/bird.jpg', 1)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    yn.model_info()
+    print(yn.predict(img))
+    # try:
+    #     yn.learn(batch_size=16)
+    # finally:
+    #     yn.model.save('best_model.h5')
