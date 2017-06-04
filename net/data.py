@@ -1,6 +1,5 @@
 import os
 from xml.dom import minidom
-from PIL import Image
 import cv2
 
 import numpy as np
@@ -24,7 +23,7 @@ VOC_CLASSES = [
 
 
 def path_sort(record):
-    return record[-10:-3]
+    return "{}{}".format(record[-10:-4], record[-15:-11])
 
 
 def class2id(class_name):
@@ -58,7 +57,7 @@ class Database(object):
                 # Check if file exist
                 file_desc = cv2.imread(d_file_path, 1)
                 file_desc = cv2.cvtColor(file_desc, cv2.COLOR_BGR2RGB)
-                img_resized = cv2.resize(file_desc, (448, 448))
+                img_resized = cv2.resize(file_desc, (224, 224))
                 image_data = np.array(img_resized, dtype='float32')
                 image_data /= 255.
                 image_data = np.transpose(image_data, (2, 0, 1))
@@ -79,7 +78,7 @@ class Database(object):
         elif type == 'train':
             db_iter = self.db_iter(self.test_annotations, self.test_images, side=side, boxes=boxes, classes=classes)
         while True:
-            batch_x = np.zeros((batch_size, 3, 448, 448))
+            batch_x = np.zeros((batch_size, 3, 224, 224))
             batch_y = np.zeros((batch_size, 1470))
             for idx in range(batch_size):
                 x, y = next(db_iter, None)

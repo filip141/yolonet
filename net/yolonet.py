@@ -334,7 +334,7 @@ class YoloNet(object):
         self.model.add(GlobalAveragePooling2D())
         self.model.add(Activation('softmax'))
 
-    def load_weights(self, yolo_weight_file, weight_num, number_of_layers_to_load=10000):
+    def load_weights(self, yolo_weight_file, weight_num):
         # Read header
         weights_file = open(yolo_weight_file, 'rb')
         weights_header = np.ndarray(shape=(4,), dtype='int32', buffer=weights_file.read(16))
@@ -343,7 +343,7 @@ class YoloNet(object):
         # Read weights
         layer_index = 0
         prev_layer = self.model.layers[0].batch_input_shape[1]
-        while layer_index < weight_num and layer_index < number_of_layers_to_load:
+        while layer_index < weight_num:
             layer = self.model.layers[layer_index]
             # Loading weights for convolution layer
             if isinstance(layer, Conv2D):
@@ -375,10 +375,9 @@ class YoloNet(object):
                 # Read convolution weights
                 conv_weights = np.ndarray(
                     shape=(w_shape[-1], w_shape[2], w_shape[0], w_shape[1]),
-                    # shape=(w_shape[-1], w_shape[2], w_shape[1], w_shape[0]), #theano
                     dtype='float32',
                     buffer=weights_file.read(np.product(w_shape) * 4))
-                conv_weights = np.transpose(conv_weights, (3, 2, 1, 0))
+                conv_weights = np.transpose(conv_weights, [2, 3, 1, 0])
                 conv_weights = [conv_weights] if batch_normalize else [
                     conv_weights, conv_bias
                 ]
@@ -403,7 +402,7 @@ class YoloNet(object):
                     buffer=weights_file.read(np.product(dense_weights) * 4))
                 layer.set_weights([dense_weights, dense_bias])
             layer_index += 1
-        remaining_weights = len(weights_file.read()) / 4.0
+        remaining_weights = len(weights_file.read()) / 4
         logger.info("Remaining weights {}".format(remaining_weights))
         weights_file.close()
 
@@ -467,13 +466,14 @@ class YoloNet(object):
             right = int((box['x'] + box['width'] / 2.) * w)
             top = int((box['y'] - box['width'] / 2.) * h)
             bot = int((box['y'] + box['width'] / 2.) * h)
-            # print(clsss_dict[box['class']])
-            cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), 2)
+            thick = int((h + w) // 150)
+            # cv2.putText(img, clsss_dict[box['class']], (left + 30, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
+            cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), thick)
         plt.imshow(image)
         plt.show()
 
     @staticmethod
-    def yolo2boxes(net_out, threshold=0.2, sqrt=1.0, classes=20, boxes=2, cells=7):
+    def yolo2boxes(net_out, threshold=0.2, sqrt=1.8, classes=20, boxes=2, cells=7):
         # Define parameters
         boxes_final = []
         all_cells = cells * cells
@@ -497,8 +497,8 @@ class YoloNet(object):
                 bx['confidence'] = confs[grid, b]
                 bx['x'] = (cords[grid, b, 0] + grid % cells) / cells
                 bx['y'] = (cords[grid, b, 1] + grid // cells) / cells
-                bx['width'] = cords[grid, b, 2] * sqrt
-                bx['height'] = cords[grid, b, 3] * sqrt
+                bx['width'] = cords[grid, b, 2] ** sqrt
+                bx['height'] = cords[grid, b, 3] ** sqrt
                 p = probs[grid, :] * bx['confidence']
 
                 for class_num in range(classes):
@@ -515,30 +515,30 @@ class YoloNet(object):
         # freeze first classification layers
         db = Database(name='voc2012')
         samples_per_epoch = db.set_size / batch_size
-        for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
-            img = np.transpose(x[0], (1, 2, 0))
-            img = (img * 255).astype(np.uint8).copy()
-            boxes_list = self.yolo2boxes(y, sqrt=1)
-            self.plot_boxes(boxes_list, img)
-            print()
-        # self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
-        #                          validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
-        #                          validation_steps=5 * batch_size,
-        #                          samples_per_epoch=samples_per_epoch,
-        #                          nb_epoch=500)
-        # # serialize model to JSON
-        # model_json = self.model.to_json()
-        # with open("../data/model_file.json", "w") as json_file:
-        #     json_file.write(model_json)
-        # # serialize weights to HDF5
-        # self.model.save_weights("../data/model_weights.h5")
-        # logger.info("Saved model to disk")
+        # for x, y in db.sb_batch_iter(boxes=2, batch_size=1, type='train'):
+        #     img = np.transpose(x[0], (1, 2, 0))
+        #     img = (img * 255).astype(np.uint8).copy()
+        #     boxes_list = self.yolo2boxes(y, sqrt=1)
+        #     self.plot_boxes(boxes_list, img)
+        #     print()
+        self.model.fit_generator(db.sb_batch_iter(boxes=2, batch_size=batch_size, type='train'),
+                                 validation_data=db.sb_batch_iter(boxes=2, batch_size=batch_size, type='val'),
+                                 validation_steps=5 * batch_size,
+                                 samples_per_epoch=samples_per_epoch,
+                                 nb_epoch=500)
+        # serialize model to JSON
+        model_json = self.model.to_json()
+        with open("../data/model_file.json", "w") as json_file:
+            json_file.write(model_json)
+        # serialize weights to HDF5
+        self.model.save_weights("../data/model_weights.h5")
+        logger.info("Saved model to disk")
 
 
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    img = cv2.imread('../data/boat.jpg', 1)
+    img = cv2.imread('../data/air.jpg', 1)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     yn.model_info()
-    print(yn.predict(img))
-    # yn.learn(batch_size=8)
+    # print(yn.predict(img))
+    yn.learn(batch_size=8)
