@@ -16,7 +16,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.core import Activation, Flatten, Dense, Dropout
 
-from data import Database
+from data import Database, VOC_CLASSES
 from loss import custom_loss_2
 
 logging.basicConfig(level=logging.INFO)
@@ -453,12 +453,6 @@ class YoloNet(object):
                     ) for idx, pr_y in zip(args_out, proba_out)])
 
     def plot_boxes(self, boxes, image):
-        clsss_dict = {
-            0: "aeroplane",
-            1: "bicycle",
-            2: "bird",
-            3: "boat"
-        }
         # Iterate over boxes
         for box in boxes:
             h, w, _ = image.shape
@@ -467,7 +461,7 @@ class YoloNet(object):
             top = int((box['y'] - box['width'] / 2.) * h)
             bot = int((box['y'] + box['width'] / 2.) * h)
             thick = int((h + w) // 150)
-            # cv2.putText(img, clsss_dict[box['class']], (left + 30, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
+            cv2.putText(img, VOC_CLASSES[box['class']], (left + 30, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
             cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), thick)
         plt.imshow(image)
         plt.show()
