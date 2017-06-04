@@ -28,6 +28,7 @@ class YoloNet(object):
         keras.backend.set_image_dim_ordering('th')
         logger.info("Yolo model initialization...")
         self.order = 'th'
+        self.yolo_mode = mode
         self.model = Sequential()
 
         # Mode select
@@ -402,7 +403,7 @@ class YoloNet(object):
                     buffer=weights_file.read(np.product(dense_weights) * 4))
                 layer.set_weights([dense_weights, dense_bias])
             layer_index += 1
-        remaining_weights = len(weights_file.read()) / 4
+        remaining_weights = len(weights_file.read()) / 4.0
         logger.info("Remaining weights {}".format(remaining_weights))
         weights_file.close()
 
@@ -439,9 +440,18 @@ class YoloNet(object):
         image_data /= 255.
         image_data = np.transpose(image_data, (2, 0, 1))
         image_data = np.expand_dims(image_data, 0)
-        out = self.model.predict(image_data)
-        boxes_list = self.yolo2boxes(out)
-        self.plot_boxes(boxes_list, image)
+        if self.yolo_mode == 'detection':
+            out = self.model.predict(image_data)
+            boxes_list = self.yolo2boxes(out)
+            self.plot_boxes(boxes_list, image)
+        else:
+            out = self.model.predict(image_data)
+            args_out = np.argsort(out)[0][::-1]
+            proba_out = np.sort(out)[0][::-1]
+            print([
+                    "{} id: {}, probability: {}".format(
+                        self.inet_nm[idx][:-1], idx, pr_y
+                    ) for idx, pr_y in zip(args_out, proba_out)])
 
     def plot_boxes(self, boxes, image):
         clsss_dict = {
@@ -463,7 +473,7 @@ class YoloNet(object):
         plt.show()
 
     @staticmethod
-    def yolo2boxes(net_out, threshold=0.3, sqrt=1.8, classes=20, boxes=2, cells=7):
+    def yolo2boxes(net_out, threshold=0.2, sqrt=1.0, classes=20, boxes=2, cells=7):
         # Define parameters
         boxes_final = []
         all_cells = cells * cells
@@ -527,8 +537,8 @@ class YoloNet(object):
 
 if __name__ == '__main__':
     yn = YoloNet(mode='detection', weights='../data/yolo-full.weights')
-    # img = cv2.imread('../data/bird.jpg', 1)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # yn.model_info()
-    # print(yn.predict(img))
-    yn.learn(batch_size=8)
+    img = cv2.imread('../data/boat.jpg', 1)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    yn.model_info()
+    print(yn.predict(img))
+    # yn.learn(batch_size=8)
