@@ -454,14 +454,15 @@ class YoloNet(object):
 
     def plot_boxes(self, boxes, image):
         # Iterate over boxes
+        plt.figure()
         for box in boxes:
             h, w, _ = image.shape
             left = int((box['x'] - box['width'] / 2.) * w)
             right = int((box['x'] + box['width'] / 2.) * w)
-            top = int((box['y'] - box['width'] / 2.) * h)
-            bot = int((box['y'] + box['width'] / 2.) * h)
+            top = int((box['y'] - box['height'] / 2.) * h)
+            bot = int((box['y'] + box['height'] / 2.) * h)
             thick = int((h + w) // 150)
-            cv2.putText(img, VOC_CLASSES[box['class']], (left + 30, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
+            cv2.putText(image, VOC_CLASSES[box['class']], (left + 30, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1, 2)
             cv2.rectangle(image, (left, top), (right, bot), (255, 0, 0), thick)
         plt.imshow(image)
         plt.show()
